@@ -5,7 +5,7 @@ import struct
 import argparse
 import logging
 
-from parse import parse_inverter_message
+from parse thubimport parse_inverter_message
 
 
 __clock = 0

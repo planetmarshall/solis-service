@@ -1,5 +1,5 @@
-from parse import parse_inverter_message
 
+from functools import reduce
 
 def test_parse_inverter_message():
     message = b"\xa5\xe9\x00\x10BO\x02\xc2\xe8\xd7\xf0\x01\x07\x05\xa7r\x01\x00\x12\x00\x00\x00'\x0cJ`\x01" \
@@ -16,3 +16,13 @@ def test_parse_inverter_message():
     data = parse_inverter_message(message)
 
     assert data["inverter_serial_number"] == "060E31208070023"
+
+def checksum(buffer):
+    return reduce(lambda lrc, x: (lrc + x) & 255, buffer)
+
+
+def test_checksum():
+    heartbeat = b'\xa5\n\x00\x10\x11"\x01\xc2\xe8\xd7\xf0\x02\x01\x8d\x9eL`\x00\x00\x00\x00\x99\x15'
+    lrc = checksum(heartbeat[1:-2])
+
+    assert lrc == 153

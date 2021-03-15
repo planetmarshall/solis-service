@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Static Analysis
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+          flake8 --count --max-line-length=120 --statistics solis_ginlong_service
+
+      - name: Install Prerequisites
+        run: |
+          adduser --disabled-password --gecos "" solis
+          mkdir -p /var/log/solis
+          chown -R solis:solis solis
+          pip install supervisor
+          pip install .
+
+      - name: Configure and run supervisor
+        run: |
+          supervisord -c config/cupervisord.conf
+          sleep 10s
+          supervisorctl status all
+          supervisorctl tail solis_ginlong_service

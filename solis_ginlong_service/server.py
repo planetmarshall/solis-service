@@ -5,11 +5,11 @@ import struct
 import argparse
 import logging
 
-from parse thubimport parse_inverter_message
+from parse import parse_inverter_message
 
 
 __clock = 0
-logger = logging.getLogger("solis-ginsong-server")
+logger = logging.getLogger("solis-ginlong-server")
 
 
 def increment_clock():
@@ -91,7 +91,7 @@ def run():
     parser.add_argument("--debug", help="turn on debug logging", default=False, action="store_true")
     args = parser.parse_args()
 
-    if (args.debug):
+    if args.debug:
         logger.setLevel(logging.DEBUG)
 
     asyncio.run(main(args.hostname, args.port))

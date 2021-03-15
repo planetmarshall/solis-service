@@ -49,3 +49,4 @@ jobs:
           supervisorctl -c ${CONFIG} status
           supervisorctl -c ${CONFIG} tail solis_service
           sudo pkill supervisord
+          cat supervisord.log

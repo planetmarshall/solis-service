@@ -37,7 +37,6 @@ jobs:
           sudo chown -R solis:solis /var/log/solis
           sudo pip install supervisor
           sudo pip install .
-          echo_supervisord_conf
 
       - name: Configure and run supervisor
         run: |

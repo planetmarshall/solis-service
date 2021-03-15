@@ -15,8 +15,8 @@ To install as a service, I use [supervisor](http://supervisord.org/).
 
 Create a `supervisord.conf` if you have not already done so and edit. For example,
 
-    [program:solis_ginsong_server]
-    command=/usr/local/bin/solis_ginsong_server
+    [program:solis_ginlong_server]
+    command=/usr/local/bin/solis_ginlong_server
     user=solis
     stdout_logfile=/var/log/solis/solis.log
     stderr_logfile=/var/log/solis/solis_error.log

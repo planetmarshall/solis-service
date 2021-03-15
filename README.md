@@ -20,5 +20,3 @@ Create a `supervisord.conf` if you have not already done so and edit. For exampl
     user=solis
     stdout_logfile=/var/log/solis/solis.log
     stderr_logfile=/var/log/solis/solis_error.log
-
-

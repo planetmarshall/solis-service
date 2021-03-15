@@ -1,6 +1,6 @@
 # Solis / Ginlong Inverter Service
 
-![Build and Run](https://github.com/planetmarshall/solis-service/workflows/build.yml/badge.svg)
+![Build and Run](https://github.com/planetmarshall/solis-service/actions/workflows/build.yml/badge.svg)
 
 This Python package implements a service that interprets messages from a Solis PV Inverter
 monitoring device and can persist them to a local database

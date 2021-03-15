@@ -9,7 +9,7 @@ from parse import parse_inverter_message
 
 
 __clock = 0
-logger = logging.getLogger("solis-ginlong-server")
+logger = logging.getLogger("solis_ginlong_server")
 
 
 def increment_clock():

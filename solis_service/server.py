@@ -9,7 +9,7 @@ from .parse import parse_inverter_message
 
 
 __clock = 0
-logger = logging.getLogger("solis_ginlong_service")
+logger = logging.getLogger("solis_service")
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")

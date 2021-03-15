@@ -28,7 +28,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install flake8
-          flake8 --count --max-line-length=120 --statistics solis_ginlong_service
+          flake8 --count --max-line-length=120 --statistics solis_service
 
       - name: Install Prerequisites
         run: |
@@ -43,4 +43,4 @@ jobs:
           sudo supervisord -c config/supervisord.conf
           sleep 10s
           supervisorctl status all
-          supervisorctl tail solis_ginlong_service
+          supervisorctl tail solis_service

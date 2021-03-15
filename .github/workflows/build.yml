@@ -34,7 +34,7 @@ jobs:
         run: |
           sudo adduser --disabled-password --gecos "" solis
           sudo mkdir -p /var/log/solis
-          sudo chown -R solis:solis solis
+          sudo chown -R solis:solis /var/log/solis
           sudo pip install supervisor
           sudo pip install .
 

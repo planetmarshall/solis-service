@@ -5,11 +5,16 @@ import struct
 import argparse
 import logging
 
-from parse import parse_inverter_message
+from .parse import parse_inverter_message
 
 
 __clock = 0
-logger = logging.getLogger("solis_ginlong_server")
+logger = logging.getLogger("solis_ginlong_service")
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 def increment_clock():

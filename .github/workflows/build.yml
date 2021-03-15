@@ -32,11 +32,11 @@ jobs:
 
       - name: Install Prerequisites
         run: |
-          adduser --disabled-password --gecos "" solis
-          mkdir -p /var/log/solis
-          chown -R solis:solis solis
-          pip install supervisor
-          pip install .
+          sudo adduser --disabled-password --gecos "" solis
+          sudo mkdir -p /var/log/solis
+          sudo chown -R solis:solis solis
+          sudo pip install supervisor
+          sudo pip install .
 
       - name: Configure and run supervisor
         run: |

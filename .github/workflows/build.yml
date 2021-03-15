@@ -40,7 +40,8 @@ jobs:
 
       - name: Configure and run supervisor
         run: |
-          sudo supervisord -c config/supervisord.conf
+          CONFIG=config/supervisord.conf
+          sudo supervisord -c ${CONFIG}
           sleep 10s
-          supervisorctl status all
-          supervisorctl tail solis_service
+          supervisorctl -c ${CONFIG} status
+          supervisorctl -c ${CONFIG} tail solis_service

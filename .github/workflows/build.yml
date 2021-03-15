@@ -37,6 +37,9 @@ jobs:
           sudo chown -R solis:solis /var/log/solis
           sudo pip install supervisor
           sudo pip install .
+          sudo cp config/solis-service.conf /etc/solis-service.conf
+          sudo chown solis:solis /etc/solis-service.conf
+          sudo chmod 600 /etc/solis-service.conf
 
       - name: Configure and run supervisor
         run: |
@@ -45,3 +48,4 @@ jobs:
           sleep 10s
           supervisorctl -c ${CONFIG} status
           supervisorctl -c ${CONFIG} tail solis_service
+          pkill supervisord

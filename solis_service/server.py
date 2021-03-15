@@ -4,12 +4,33 @@ from io import BytesIO
 import struct
 import argparse
 import logging
+import logging.config
+from configparser import ConfigParser
+import os
 
-from parse import parse_inverter_message
+from .parse import parse_inverter_message
 
 
 __clock = 0
-logger = logging.getLogger("solis-ginlong-server")
+logger = logging.getLogger("solis_service")
+
+
+def load_config(config_file=None):
+    if config_file is None:
+        config_file_name = "solis-service.conf"
+        candidates = [os.path.realpath(os.path.join(prefix, config_file_name))
+                      for prefix in [".", "/etc", "/usr/local/etc"]]
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                config_file = candidate
+        if config_file is None:
+            raise ValueError("No config file found")
+
+    config_file_path = os.path.realpath(config_file)
+    logging.config.fileConfig(config_file)
+    config = ConfigParser()
+    config.read(config_file_path)
+    return config
 
 
 def increment_clock():
@@ -75,7 +96,7 @@ async def handle_inverter_message(reader, writer):
     writer.close()
 
 
-async def main(hostname, port):
+async def main(hostname, port, **kwargs):
     logger.info(f"Starting server on {hostname}:{port}")
     server = await asyncio.start_server(handle_inverter_message, hostname, port)
 
@@ -86,15 +107,13 @@ async def main(hostname, port):
 def run():
     parser = argparse.ArgumentParser(
         description="Receive messages from a Solis/Ginsong inverter and persist to a database")
-    parser.add_argument("--hostname", help="IP address for the server host", default="localhost")
-    parser.add_argument("--port", help="Port for the server host", default=9042)
-    parser.add_argument("--debug", help="turn on debug logging", default=False, action="store_true")
+    parser.add_argument("--config", help="load a config file")
     args = parser.parse_args()
+    config = load_config(args.config)
+    hostname = config["service"].get("hostname", "localhost")
+    port = config["service"].get("port", 9042)
 
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-
-    asyncio.run(main(args.hostname, args.port))
+    asyncio.run(main(hostname, port))
 
 
 if __name__ == "__main__":

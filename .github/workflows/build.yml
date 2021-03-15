@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build package and test
     runs-on: ubuntu-20.04
 
     steps:
@@ -28,19 +28,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install flake8
-          flake8 --count --max-line-length=120 --statistics solis_ginlong_service
+          flake8 --count --max-line-length=120 --statistics solis_service
 
       - name: Install Prerequisites
         run: |
-          adduser --disabled-password --gecos "" solis
-          mkdir -p /var/log/solis
-          chown -R solis:solis solis
-          pip install supervisor
-          pip install .
+          sudo adduser --disabled-password --gecos "" solis
+          sudo mkdir -p /var/log/solis
+          sudo chown -R solis:solis /var/log/solis
+          sudo pip install supervisor
+          sudo pip install .
+          sudo cp config/solis-service.conf /etc/solis-service.conf
+          sudo chown solis:solis /etc/solis-service.conf
+          sudo chmod 600 /etc/solis-service.conf
 
       - name: Configure and run supervisor
         run: |
-          supervisord -c config/cupervisord.conf
+          CONFIG=config/supervisord.conf
+          sudo supervisord -c ${CONFIG}
           sleep 10s
-          supervisorctl status all
-          supervisorctl tail solis_ginlong_service
+          supervisorctl -c ${CONFIG} status
+          supervisorctl -c ${CONFIG} tail solis_service
+          sudo pkill supervisord
+          cat supervisord.log
+          cat /var/log/solis/solis.log
+          cat /var/log/solis/solis_error.log

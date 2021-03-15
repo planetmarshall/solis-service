@@ -17,7 +17,7 @@ def parse_inverter_message(message):
         "ac_output_frequency":              0.01 * unpack_from("<H", message, 70)[0] * ureg.hertz,
         "daily_active_generation":          0.01 * unpack_from("<H", message, 76)[0] * ureg.kilowatt_hour,
         "total_dc_input_power":             float(unpack_from("<I", message, 116)[0]) * ureg.watts,
-        "total_active_generation":          float(unpack_from("<I", message, 120)[0]) * ureg.kilowatt_hour, # or 130
+        "total_active_generation":          float(unpack_from("<I", message, 120)[0]) * ureg.kilowatt_hour,  # or 130
         "generation_yesterday":             0.1 * unpack_from("<H", message, 128)[0] * ureg.kilowatt_hour,
         "power_grid_total_apparent_power":  float(unpack_from("<I", message, 142)[0]) * ureg.volt_ampere,
     }

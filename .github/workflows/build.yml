@@ -46,9 +46,9 @@ jobs:
           CONFIG=config/supervisord.conf
           sudo supervisord -c ${CONFIG}
           sleep 10s
-          cat /var/log/solis/solis.log
-          cat /var/log/solis/solis_error.log
           supervisorctl -c ${CONFIG} status
           supervisorctl -c ${CONFIG} tail solis_service
           sudo pkill supervisord
           cat supervisord.log
+          cat /var/log/solis/solis.log
+          cat /var/log/solis/solis_error.log

@@ -22,7 +22,7 @@ def load_config(config_file=None):
                       for prefix in [".", "/etc", "/usr/local/etc"]]
         for candidate in candidates:
             if os.path.exists(candidate):
-                config_file = os.path.realpath(config_file_name)
+                config_file = candidate
         if config_file is None:
             raise ValueError("No config file found")
 

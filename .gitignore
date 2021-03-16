@@ -1,0 +1,7 @@
+# IDE folders
+.idea
+
+# python folders
+.venv
+*.egg-info
+__pycache__

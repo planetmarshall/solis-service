@@ -1,3 +1,4 @@
+from functools import reduce
 from struct import unpack_from
 
 import pint
@@ -21,3 +22,7 @@ def parse_inverter_message(message):
         "generation_yesterday":             0.1 * unpack_from("<H", message, 128)[0] * ureg.kilowatt_hour,
         "power_grid_total_apparent_power":  float(unpack_from("<I", message, 142)[0]) * ureg.volt_ampere,
     }
+
+
+def checksum_byte(buffer):
+    return reduce(lambda lrc, x: (lrc + x) & 255, buffer)

@@ -1,17 +1,20 @@
+import argparse
 import asyncio
+from configparser import ConfigParser
 from datetime import datetime
 from io import BytesIO
-import struct
-import argparse
 import logging
 import logging.config
-from configparser import ConfigParser
 import os
+import struct
 
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
 
-from .parse import parse_inverter_message
+from .messaging import (
+    parse_inverter_message,
+    checksum_byte
+)
 from .persist import to_influx_measurement
 
 
@@ -44,13 +47,6 @@ def increment_clock():
     return ++__clock & 255
 
 
-def _checksum(buffer):
-    lrc = 0
-    for b in buffer[1:]:
-        lrc = (lrc + b) & 255
-    return struct.pack("<B", lrc & 255)
-
-
 def _server_response(mode):
     buffer = BytesIO()
     header = b'\xa5\n\x00\x10'
@@ -63,7 +59,7 @@ def _server_response(mode):
     buffer.write(struct.pack("<I", timestamp))
     suffix = b'\x00\x00\x00\x00'
     buffer.write(suffix)
-    buffer.write(_checksum(buffer.getvalue()))
+    buffer.write(checksum_byte(buffer.getvalue()[1:]))
     buffer.write(b'\x15')
 
     return buffer.getvalue()
@@ -122,14 +118,14 @@ def run():
     args = parser.parse_args()
     config = load_config(args.config)
     hostname = config["service"].get("hostname", "localhost")
-    port = config["service"].get("port", 9042)
+    port = config["service"].get("port", "9042")
 
     influx_config = config["influx"]
 
     __persistence = InfluxDBClient(url=influx_config["url"], token=influx_config["password"])
     __bucket = influx_config["bucket"]
 
-    asyncio.run(main(hostname, port))
+    asyncio.run(main(hostname, int(port)))
 
 
 if __name__ == "__main__":

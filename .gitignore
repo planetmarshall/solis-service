@@ -5,3 +5,6 @@
 .venv
 *.egg-info
 __pycache__
+
+# git files
+*.orig

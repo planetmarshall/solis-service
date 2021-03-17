@@ -1,5 +1,7 @@
-
 from functools import reduce
+
+from solis_service.parse import parse_inverter_message
+from solis_service.persist import to_influx_measurement
 
 def test_parse_inverter_message():
     message = b"\xa5\xe9\x00\x10BO\x02\xc2\xe8\xd7\xf0\x01\x07\x05\xa7r\x01\x00\x12\x00\x00\x00'\x0cJ`\x01" \
@@ -14,6 +16,7 @@ def test_parse_inverter_message():
               b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x96\x15"
 
     data = parse_inverter_message(message)
+    influx = to_influx_measurement("time", data)
 
     assert data["inverter_serial_number"] == "060E31208070023"
 

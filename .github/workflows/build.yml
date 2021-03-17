@@ -35,11 +35,13 @@ jobs:
           sudo adduser --disabled-password --gecos "" solis
           sudo mkdir -p /var/log/solis
           sudo chown -R solis:solis /var/log/solis
-          sudo pip install supervisor
-          sudo pip install .
+          sudo pip install . pytest supervisor
           sudo cp config/solis-service.conf /etc/solis-service.conf
           sudo chown solis:solis /etc/solis-service.conf
           sudo chmod 600 /etc/solis-service.conf
+
+      - name: Run tests
+          pytest -v test
 
       - name: Configure and run supervisor
         run: |

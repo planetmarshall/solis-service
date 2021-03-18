@@ -10,7 +10,7 @@ from .messaging import (
     parse_inverter_message,
     mock_server_response
 )
-from .persist import persistence_client
+from .persistence import persistence_client
 
 
 __clock = 0

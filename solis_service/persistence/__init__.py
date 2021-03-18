@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 
-from .persistence.influxdb_persistence_client import InfluxDbPersistenceClient
+from .influxdb_persistence_client import InfluxDbPersistenceClient
 
 
 @contextmanager

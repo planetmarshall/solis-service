@@ -1,20 +1,16 @@
 import argparse
 import asyncio
 from configparser import ConfigParser
-from datetime import datetime
 import functools
 import logging
 import logging.config
 import os
 
-from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import ASYNCHRONOUS
-
 from .messaging import (
     parse_inverter_message,
     mock_server_response
 )
-from .persist import to_influx_measurement
+from .persist import persistence_client
 
 
 __clock = 0
@@ -60,7 +56,7 @@ def _is_data_packet(message):
     return len(message) == 246
 
 
-async def handle_inverter_message(influx: dict, reader, writer):
+async def handle_inverter_message(persist, reader, writer):
     buffer_size = 512
     message = await reader.read(buffer_size)
 
@@ -70,28 +66,21 @@ async def handle_inverter_message(influx: dict, reader, writer):
         writer.close()
 
     elif _is_data_packet(message):
-        client = influx["client"]
-        bucket = influx["bucket"]
         writer.write(_data_response())
         writer.close()
         inverter_data = parse_inverter_message(message)
         logger.debug(f'Received data message from {writer.transport.get_extra_info("peername")}')
         logger.debug(f'data message: {inverter_data}')
-        influx_writer = client.write_api(write_options=ASYNCHRONOUS)
-        measurement = to_influx_measurement(datetime.utcnow().isoformat(), inverter_data)
-        logger.debug(f'Writing to influx: {measurement}')
-        influx_writer.write(bucket=bucket, record=measurement)
+        logger.debug(f'persisting data with {persist.description}')
+        await persist.write_measurement(inverter_data)
 
 
-async def main(hostname, port, influx_config):
+async def main(hostname, port, config):
     logger.info(f"Starting server on {hostname}:{port}")
-    influx = {
-        "client": InfluxDBClient( url=influx_config["url"], token=influx_config["token"], org=influx_config["org"]),
-        "bucket": influx_config["bucket"]
-    }
-    server = await asyncio.start_server(functools.partial(handle_inverter_message, influx), hostname, port)
-    async with server:
-        await server.serve_forever()
+    with persistence_client(config) as client:
+        server = await asyncio.start_server(functools.partial(handle_inverter_message, client), hostname, port)
+        async with server:
+            await server.serve_forever()
 
 
 def run():
@@ -100,12 +89,11 @@ def run():
     parser.add_argument("--config", help="load a config file")
     args = parser.parse_args()
     config = load_config(args.config)
-    hostname = config["service"].get("hostname", "localhost")
-    port = config["service"].get("port", "9042")
+    service_config = config["service"]
+    hostname = service_config.get("hostname", "localhost")
+    port = service_config.get("port", "9042")
 
-    influx_config = config["influx"]
-
-    asyncio.run(main(hostname, int(port), influx_config))
+    asyncio.run(main(hostname, int(port), service_config))
 
 
 if __name__ == "__main__":

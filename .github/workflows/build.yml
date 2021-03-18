@@ -52,6 +52,10 @@ jobs:
           supervisorctl -c ${CONFIG} status
           supervisorctl -c ${CONFIG} tail solis_service
           sudo pkill supervisord
+
+      - name: Show error logs
+        run: |
           cat supervisord.log
           cat /var/log/solis/solis.log
           cat /var/log/solis/solis_error.log
+        if: always()

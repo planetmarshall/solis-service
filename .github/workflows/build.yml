@@ -41,6 +41,7 @@ jobs:
           sudo chmod 600 /etc/solis-service.conf
 
       - name: Run tests
+        run: |
           pytest -v test
 
       - name: Configure and run supervisor

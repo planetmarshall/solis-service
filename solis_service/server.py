@@ -93,7 +93,7 @@ def run():
     hostname = service_config.get("hostname", "localhost")
     port = service_config.get("port", "9042")
 
-    asyncio.run(main(hostname, int(port), service_config))
+    asyncio.run(main(hostname, int(port), config))
 
 
 if __name__ == "__main__":

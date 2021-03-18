@@ -121,7 +121,11 @@ def run():
 
     influx_config = config["influx"]
 
-    __persistence: InfluxDBClient = InfluxDBClient(**influx_config)
+    __persistence: InfluxDBClient = InfluxDBClient(
+        url=influx_config["url"],
+        token=influx_config["token"],
+        org=influx_config["org"]
+    )
     __bucket = influx_config["bucket"]
 
     asyncio.run(main(hostname, int(port)))

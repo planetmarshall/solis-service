@@ -2,6 +2,7 @@ import argparse
 import asyncio
 from configparser import ConfigParser
 from datetime import datetime
+import functools
 import logging
 import logging.config
 import os
@@ -18,8 +19,6 @@ from .persist import to_influx_measurement
 
 __clock = 0
 logger = logging.getLogger("solis_service")
-__persistence: InfluxDBClient
-__bucket: str
 
 
 def load_config(config_file=None):
@@ -61,31 +60,36 @@ def _is_data_packet(message):
     return len(message) == 246
 
 
-async def handle_inverter_message(reader, writer):
+async def handle_inverter_message(influx: dict, reader, writer):
     buffer_size = 512
     message = await reader.read(buffer_size)
 
     if _is_heartbeat(message):
         logger.debug(f'Received heartbeat message from {writer.transport.get_extra_info("peername")}')
         writer.write(_heartbeat_response())
+        writer.close()
 
     elif _is_data_packet(message):
+        client = influx["client"]
+        bucket = influx["bucket"]
         writer.write(_data_response())
+        writer.close()
         inverter_data = parse_inverter_message(message)
         logger.debug(f'Received data message from {writer.transport.get_extra_info("peername")}')
         logger.debug(f'data message: {inverter_data}')
-        influx_writer = __persistence.write_api(write_options=ASYNCHRONOUS)
+        influx_writer = client.write_api(write_options=ASYNCHRONOUS)
         measurement = to_influx_measurement(datetime.utcnow().isoformat(), inverter_data)
         logger.debug(f'Writing to influx: {measurement}')
-        influx_writer.write(bucket=__bucket, record=measurement)
-
-    writer.close()
+        influx_writer.write(bucket=bucket, record=measurement)
 
 
-async def main(hostname, port):
+async def main(hostname, port, influx_config):
     logger.info(f"Starting server on {hostname}:{port}")
-    server = await asyncio.start_server(handle_inverter_message, hostname, port)
-
+    influx = {
+        "client": InfluxDBClient( url=influx_config["url"], token=influx_config["token"], org=influx_config["org"]),
+        "bucket": influx_config["bucket"]
+    }
+    server = await asyncio.start_server(functools.partial(handle_inverter_message, influx), hostname, port)
     async with server:
         await server.serve_forever()
 
@@ -101,14 +105,7 @@ def run():
 
     influx_config = config["influx"]
 
-    __persistence: InfluxDBClient = InfluxDBClient(
-        url=influx_config["url"],
-        token=influx_config["token"],
-        org=influx_config["org"]
-    )
-    __bucket = influx_config["bucket"]
-
-    asyncio.run(main(hostname, int(port)))
+    asyncio.run(main(hostname, int(port), influx_config))
 
 
 if __name__ == "__main__":

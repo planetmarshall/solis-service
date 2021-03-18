@@ -1,7 +1,4 @@
-from solis_service.messaging import (
-    parse_inverter_message,
-    checksum_byte
-)
+from solis_service import messaging
 
 
 def test_parse_inverter_message():
@@ -16,7 +13,7 @@ def test_parse_inverter_message():
               b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
               b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x96\x15"
 
-    data = parse_inverter_message(message)
+    data = messaging.parse_inverter_message(message)
     expected = {
         "inverter_temperature": 36.8,
         "dc_voltage_pv1": 213.6,
@@ -38,7 +35,13 @@ def test_parse_inverter_message():
 
 
 def test_checksum():
-    heartbeat = b'\xa5\n\x00\x10\x11"\x01\xc2\xe8\xd7\xf0\x02\x01\x8d\x9eL`\x00\x00\x00\x00\x99\x15'
-    lrc = checksum_byte(heartbeat[1:-2])
+    heartbeat = b'\xa5\n\x00\x10\x12\xbc\x04\xc2\xe8\xd7\xf0\x01\x01\x08CS`\x00\x00\x00\x00]\x15'
+    lrc = messaging.checksum_byte(heartbeat[1:-2])
 
-    assert lrc == 153
+    assert lrc == 93
+
+
+def test_mock_server_response():
+    expected = b'\xa5\n\x00\x10\x12\xbc\x01\xc2\xe8\xd7\xf0\x02\x01\x08CS`\x00\x00\x00\x00[\x15'
+    response = messaging.mock_server_response(188, b'\x12', 1616069384)
+    assert response == expected

@@ -2,18 +2,16 @@ import argparse
 import asyncio
 from configparser import ConfigParser
 from datetime import datetime
-from io import BytesIO
 import logging
 import logging.config
 import os
-import struct
 
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import ASYNCHRONOUS
 
 from .messaging import (
     parse_inverter_message,
-    checksum_byte
+    mock_server_response
 )
 from .persist import to_influx_measurement
 
@@ -47,30 +45,12 @@ def increment_clock():
     return ++__clock & 255
 
 
-def _server_response(mode):
-    buffer = BytesIO()
-    header = b'\xa5\n\x00\x10'
-    buffer.write(header)
-    buffer.write(mode)
-    buffer.write(struct.pack("<B", increment_clock()))
-    prefix = b'\x01\xc2\xe8\xd7\xf0\x02\x01'
-    buffer.write(prefix)
-    timestamp = int(datetime.utcnow().timestamp())
-    buffer.write(struct.pack("<I", timestamp))
-    suffix = b'\x00\x00\x00\x00'
-    buffer.write(suffix)
-    buffer.write(checksum_byte(buffer.getvalue()[1:]))
-    buffer.write(b'\x15')
-
-    return buffer.getvalue()
-
-
 def _heartbeat_response():
-    return _server_response(b'\x11')
+    return mock_server_response(increment_clock(), b'\x11')
 
 
 def _data_response():
-    return _server_response(b'\x12')
+    return mock_server_response(increment_clock(), b'\x12')
 
 
 def _is_heartbeat(message):

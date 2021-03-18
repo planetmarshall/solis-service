@@ -1,5 +1,5 @@
+from solis_service import messaging
 
-from functools import reduce
 
 def test_parse_inverter_message():
     message = b"\xa5\xe9\x00\x10BO\x02\xc2\xe8\xd7\xf0\x01\x07\x05\xa7r\x01\x00\x12\x00\x00\x00'\x0cJ`\x01" \
@@ -13,16 +13,35 @@ def test_parse_inverter_message():
               b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" \
               b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x96\x15"
 
-    data = parse_inverter_message(message)
+    data = messaging.parse_inverter_message(message)
+    expected = {
+        "inverter_temperature": 36.8,
+        "dc_voltage_pv1": 213.6,
+        "dc_current": 2.0,
+        "ac_current_t_w_c": 1.6,
+        "ac_voltage_t_w_c": 236.0,
+        "ac_output_frequency": 50.02,
+        "daily_active_generation": 1.9,
+        "total_dc_input_power": 427.0,
+        "total_active_generation": 5.0,
+        "generation_yesterday": 3.2,
+        "power_grid_total_apparent_power": 370.0
+    }
 
     assert data["inverter_serial_number"] == "060E31208070023"
-
-def checksum(buffer):
-    return reduce(lambda lrc, x: (lrc + x) & 255, buffer)
+    for key in expected.keys():
+        if key != "inverter_serial_number":
+            assert expected[key] - data[key].magnitude < 1.0e-5
 
 
 def test_checksum():
-    heartbeat = b'\xa5\n\x00\x10\x11"\x01\xc2\xe8\xd7\xf0\x02\x01\x8d\x9eL`\x00\x00\x00\x00\x99\x15'
-    lrc = checksum(heartbeat[1:-2])
+    heartbeat = b'\xa5\n\x00\x10\x12\xbc\x04\xc2\xe8\xd7\xf0\x01\x01\x08CS`\x00\x00\x00\x00]\x15'
+    lrc = messaging.checksum_byte(heartbeat[1:-2])
 
-    assert lrc == 153
+    assert lrc == 93
+
+
+def test_mock_server_response():
+    expected = b'\xa5\n\x00\x10\x12\xbc\x01\xc2\xe8\xd7\xf0\x02\x01\x08CS`\x00\x00\x00\x00[\x15'
+    response = messaging.mock_server_response(188, b'\x12', 1616069384)
+    assert response == expected

@@ -1,14 +1,16 @@
-import asyncio
-from datetime import datetime
-from io import BytesIO
-import struct
 import argparse
+import asyncio
+from configparser import ConfigParser
+import functools
 import logging
 import logging.config
-from configparser import ConfigParser
 import os
 
-from .parse import parse_inverter_message
+from .messaging import (
+    parse_inverter_message,
+    mock_server_response
+)
+from .persistence import persistence_client
 
 
 __clock = 0
@@ -38,37 +40,12 @@ def increment_clock():
     return ++__clock & 255
 
 
-def _checksum(buffer):
-    lrc = 0
-    for b in buffer[1:]:
-        lrc = (lrc + b) & 255
-    return struct.pack("<B", lrc & 255)
-
-
-def _server_response(mode):
-    buffer = BytesIO()
-    header = b'\xa5\n\x00\x10'
-    buffer.write(header)
-    buffer.write(mode)
-    buffer.write(struct.pack("<B", increment_clock()))
-    prefix = b'\x01\xc2\xe8\xd7\xf0\x02\x01'
-    buffer.write(prefix)
-    timestamp = int(datetime.utcnow().timestamp())
-    buffer.write(struct.pack("<I", timestamp))
-    suffix = b'\x00\x00\x00\x00'
-    buffer.write(suffix)
-    buffer.write(_checksum(buffer.getvalue()))
-    buffer.write(b'\x15')
-
-    return buffer.getvalue()
-
-
 def _heartbeat_response():
-    return _server_response(b'\x11')
+    return mock_server_response(increment_clock(), b'\x11')
 
 
 def _data_response():
-    return _server_response(b'\x12')
+    return mock_server_response(increment_clock(), b'\x12')
 
 
 def _is_heartbeat(message):
@@ -79,29 +56,31 @@ def _is_data_packet(message):
     return len(message) == 246
 
 
-async def handle_inverter_message(reader, writer):
+async def handle_inverter_message(persist, reader, writer):
     buffer_size = 512
     message = await reader.read(buffer_size)
 
     if _is_heartbeat(message):
         logger.debug(f'Received heartbeat message from {writer.transport.get_extra_info("peername")}')
         writer.write(_heartbeat_response())
+        writer.close()
 
     elif _is_data_packet(message):
         writer.write(_data_response())
+        writer.close()
         inverter_data = parse_inverter_message(message)
         logger.debug(f'Received data message from {writer.transport.get_extra_info("peername")}')
         logger.debug(f'data message: {inverter_data}')
+        logger.debug(f'persisting data with {persist.description}')
+        await persist.write_measurement(inverter_data)
 
-    writer.close()
 
-
-async def main(hostname, port, **kwargs):
+async def main(hostname, port, config):
     logger.info(f"Starting server on {hostname}:{port}")
-    server = await asyncio.start_server(handle_inverter_message, hostname, port)
-
-    async with server:
-        await server.serve_forever()
+    with persistence_client(config) as client:
+        server = await asyncio.start_server(functools.partial(handle_inverter_message, client), hostname, port)
+        async with server:
+            await server.serve_forever()
 
 
 def run():
@@ -110,10 +89,11 @@ def run():
     parser.add_argument("--config", help="load a config file")
     args = parser.parse_args()
     config = load_config(args.config)
-    hostname = config["service"].get("hostname", "localhost")
-    port = config["service"].get("port", 9042)
+    service_config = config["service"]
+    hostname = service_config.get("hostname", "localhost")
+    port = service_config.get("port", "9042")
 
-    asyncio.run(main(hostname, port))
+    asyncio.run(main(hostname, int(port), config))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,10 @@
+# IDE folders
+.idea
+
+# python folders
+.venv
+*.egg-info
+__pycache__
+
+# git files
+*.orig

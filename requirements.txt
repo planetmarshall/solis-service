@@ -1,5 +1,6 @@
+influxdb-client[ciso]
 numpy
+openpyxl
 pandas
 pint
-openpyxl
 pytest

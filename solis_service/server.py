@@ -9,7 +9,7 @@ import os
 import struct
 
 from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client.client.write_api import ASYNCHRONOUS
 
 from .messaging import (
     parse_inverter_message,
@@ -20,8 +20,8 @@ from .persist import to_influx_measurement
 
 __clock = 0
 logger = logging.getLogger("solis_service")
-__persistence = None
-__bucket = None
+__persistence: InfluxDBClient
+__bucket: str
 
 
 def load_config(config_file=None):
@@ -94,16 +94,15 @@ async def handle_inverter_message(reader, writer):
         inverter_data = parse_inverter_message(message)
         logger.debug(f'Received data message from {writer.transport.get_extra_info("peername")}')
         logger.debug(f'data message: {inverter_data}')
-        influx_writer = __persistence.write_api(write_options=SYNCHRONOUS)
+        influx_writer = __persistence.write_api(write_options=ASYNCHRONOUS)
         measurement = to_influx_measurement(datetime.utcnow().isoformat(), inverter_data)
         logger.debug(f'Writing to influx: {measurement}')
-        influx_writer.write(measurement)
-        influx_writer.close()
+        influx_writer.write(bucket=__bucket, record=measurement)
 
     writer.close()
 
 
-async def main(hostname, port, **kwargs):
+async def main(hostname, port):
     logger.info(f"Starting server on {hostname}:{port}")
     server = await asyncio.start_server(handle_inverter_message, hostname, port)
 
@@ -122,7 +121,7 @@ def run():
 
     influx_config = config["influx"]
 
-    __persistence = InfluxDBClient(url=influx_config["url"], token=influx_config["password"])
+    __persistence: InfluxDBClient = InfluxDBClient(**influx_config)
     __bucket = influx_config["bucket"]
 
     asyncio.run(main(hostname, int(port)))

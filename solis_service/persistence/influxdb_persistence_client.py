@@ -26,9 +26,8 @@ class InfluxDbPersistenceClient:
     async def write_measurement(self, measurement):
         timestamp = datetime.utcnow().isoformat()
         record = to_influx_measurement(timestamp, measurement)
-        return asyncio.get_running_loop().run_in_executor(None, 
-                partial(self.writer.write, self.bucket, record=record)
-                )
+        return asyncio.get_running_loop().run_in_executor(
+            None, partial(self.writer.write, self.bucket, record=record))
 
     def close(self):
         self.writer.close()

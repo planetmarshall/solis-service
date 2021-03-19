@@ -5,6 +5,10 @@
 This Python package implements a service that interprets messages from a Solis PV Inverter
 monitoring device and can persist them to various destinations
 
+Here's it being used to display a Grafana dashboard on my Raspberry Pi
+
+![Grafana Dashboard](https://www.algodynamic.co.uk/images/grafana.png)
+
 ## Configuration
 
 See the example file in `conf`.
@@ -31,3 +35,8 @@ Run supervisor
     sudo supervisord -c conf/supervisord.conf
     supervisorctl -c conf/supervisord.conf status
     supervisorctl -c conf/supervisord.conf tail solis_service
+
+## Reverse engineering the data protocol
+
+For some details on reverse engineering the protocol, See my 
+[blog](https://www.algodynamic.co.uk/reverse-engineering-the-solisginlong-inverter-protocol.html)

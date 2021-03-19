@@ -72,7 +72,8 @@ async def handle_inverter_message(persist, reader, writer):
         logger.debug(f'Received data message from {writer.transport.get_extra_info("peername")}')
         logger.debug(f'data message: {inverter_data}')
         logger.debug(f'persisting data with {persist.description}')
-        await persist.write_measurement(inverter_data)
+        result = await persist.write_measurement(inverter_data)
+        logger.debug(f'persistence result: {result}')
 
 
 async def main(hostname, port, config):

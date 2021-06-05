@@ -5,15 +5,17 @@ import functools
 import logging
 import logging.config
 import os
+import traceback
 
 from .messaging import (
+    parse_header,
     parse_inverter_message,
-    mock_server_response
+    mock_server_response,
+    checksum_byte
 )
 from .persistence import persistence_client
 
 
-__clock = 0
 logger = logging.getLogger("solis_service")
 
 
@@ -35,45 +37,48 @@ def load_config(config_file=None):
     return config
 
 
-def increment_clock():
-    global __clock
-    return ++__clock & 255
+def _is_heartbeat(header):
+    return header['type'] == 0x41
 
-
-def _heartbeat_response():
-    return mock_server_response(increment_clock(), b'\x11')
-
-
-def _data_response():
-    return mock_server_response(increment_clock(), b'\x12')
-
-
-def _is_heartbeat(message):
-    return len(message) == 99
-
-
-def _is_data_packet(message):
-    return len(message) == 246
+def _is_data_packet(header):
+    return header['type'] == 0x42
 
 
 async def handle_inverter_message(persist, reader, writer):
-    buffer_size = 512
-    message = await reader.read(buffer_size)
+    try:
+        while True:
+            msghdr = await reader.readexactly(11)
+            header = parse_header(msghdr)
+            payload_plus_footer = await reader.readexactly(header['payload_length']+2)
+            message = msghdr + payload_plus_footer
 
-    if _is_heartbeat(message):
-        logger.debug(f'Received heartbeat message from {writer.transport.get_extra_info("peername")}')
-        writer.write(_heartbeat_response())
-        writer.close()
+            if message[0] == 0xa5 and message[-1] == 0x15 and message[-2] == checksum_byte(message[1:-2]):
+                if _is_heartbeat(header):
+                    logger.debug(f'Received heartbeat message from {writer.transport.get_extra_info("peername")} serial={header["serialno"]}')
 
-    elif _is_data_packet(message):
-        writer.write(_data_response())
+                elif _is_data_packet(header):
+                    inverter_data = parse_inverter_message(message)
+                    logger.debug(f'Received data message from {writer.transport.get_extra_info("peername")}')
+                    logger.debug(f'data message: {inverter_data}')
+                    logger.debug(f'persisting data with {persist.description}')
+                    result = await persist.write_measurement(inverter_data)
+                    logger.debug(f'persistence result: {result}')
+
+                else:
+                    logger.debug(f'Unknown packet from {writer.transport.get_extra_info("peername")}: {message} {header}')
+
+                writer.write(mock_server_response(header, payload_plus_footer))
+
+            else:
+                    logger.debug(f'Malformed packet from {writer.transport.get_extra_info("peername")}: {message[0]} {message[-1]}')
+                    break
+
+    except Exception:
+        traceback.print_exc()
+
+    finally:
         writer.close()
-        inverter_data = parse_inverter_message(message)
-        logger.debug(f'Received data message from {writer.transport.get_extra_info("peername")}')
-        logger.debug(f'data message: {inverter_data}')
-        logger.debug(f'persisting data with {persist.description}')
-        result = await persist.write_measurement(inverter_data)
-        logger.debug(f'persistence result: {result}')
+        await writer.wait_closed()
 
 
 async def main(hostname, port, config):

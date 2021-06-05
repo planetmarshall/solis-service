@@ -8,6 +8,15 @@ import pint
 
 ureg = pint.UnitRegistry()
 
+def parse_header(msghdr):
+    [ payload_length, type, resp_idx, req_idx, serialno ] = unpack_from("<xHxBBBI", msghdr, 0)
+    return {
+        "payload_length": payload_length,
+        "type": type,
+        "resp_idx": resp_idx,
+        "req_idx": req_idx,
+        "serialno": serialno
+    }
 
 def parse_inverter_message(message):
     return {
@@ -30,20 +39,15 @@ def checksum_byte(buffer):
     return reduce(lambda lrc, x: (lrc + x) & 255, buffer) & 255
 
 
-def mock_server_response(clock, mode, timestamp=None):
+def mock_server_response(header, request_payload, timestamp=None):
     unix_time = int(datetime.utcnow().timestamp() if timestamp is None else timestamp)
-    buffer = BytesIO()
-    header = b'\xa5\n\x00\x10'
-    buffer.write(header)
-    buffer.write(mode)
-    buffer.write(pack("<B", clock))
-    prefix = b'\x01\xc2\xe8\xd7\xf0\x02\x01'
-    buffer.write(prefix)
-    buffer.write(pack("<I", unix_time))
-    suffix = b'\x00\x00\x00\x00'
-    buffer.write(suffix)
-    checksum_data = buffer.getvalue()
-    buffer.write(pack("<B", checksum_byte(checksum_data[1:])))
-    buffer.write(b'\x15')
+    
+    # don't know what's the meaning of these magic values
+    # the first byte seems to usually echo the first byte of the request payload
+    payload = pack("<BBIBBBB", request_payload[0], 0x01, unix_time, 0xaa, 0xaa, 0x00, 0x00)
 
-    return buffer.getvalue()
+    resp_type = header['type'] - 0x30
+    header = pack("<BHBBBBI", 0xa5, len(payload), 0x00, resp_type, header['req_idx'], header['req_idx'], header['serialno'])
+    message = header + payload
+    message += pack("BB", checksum_byte(message[1:]), 0x15)
+    return message
